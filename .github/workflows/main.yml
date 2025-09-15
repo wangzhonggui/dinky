@@ -1,0 +1,35 @@
+name: 自动同步主仓库
+permissions:
+  contents: write  # 允许推送代码
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天 00:00 UTC 执行（北京时间 08:00）
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 拉取所有提交历史
+          ref: dev  # 直接检出 dev 分支，避免默认分支不一致
+
+      - name: 添加上游仓库（若不存在）
+        run: |
+          if ! git remote | grep -q upstream; then
+            git remote add upstream https://github.com/DataLinkDC/dinky.git
+          fi
+
+      - name: 拉取上游更新
+        run: git fetch upstream
+
+      - name: 合并上游分支（仅快进）
+        run: |
+          git checkout dev
+          git merge upstream/dev --ff-only
+
+      - name: 推送更新到自己的仓库
+        run: git push origin dev
