@@ -15,21 +15,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # 拉取所有提交历史
-          ref: dev  # 直接检出 dev 分支，避免默认分支不一致
+          ref: dev  # 直接检出 dev 分支
+          token: ${{ secrets.GITHUB_TOKEN }}  # 显式指定token
+
+      - name: 配置Git用户信息
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
       - name: 添加上游仓库（若不存在）
         run: |
           if ! git remote | grep -q upstream; then
             git remote add upstream https://github.com/DataLinkDC/dinky.git
           fi
+          # 验证上游仓库配置
+          git remote -v
 
       - name: 拉取上游更新
-        run: git fetch upstream
+        run: |
+          git fetch upstream
+          # 显示上游分支信息，便于调试
+          git branch -r
 
       - name: 合并上游分支（仅快进）
         run: |
           git checkout dev
-          git merge upstream/dev --ff-only
+          # 尝试快进合并
+          if ! git merge upstream/dev --ff-only; then
+            echo "无法执行快进合并，可能存在冲突"
+            exit 1
+          fi
 
       - name: 推送更新到自己的仓库
-        run: git push origin dev
+        run: |
+          git push origin dev
+          echo "推送成功"
